@@ -1,8 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:4000';
-
 const TIMER_SECONDS = 20;
+
+const CATEGORIES = [
+  { label: '🏆 All Sports', value: 'All' },
+  { label: '⚽ Soccer', value: 'Football' },
+  { label: '🏀 Basketball', value: 'Basketball' },
+  { label: '⚾ Baseball', value: 'Baseball' },
+  { label: '🏈 NFL', value: 'American Football' },
+  { label: '🏎️ Formula 1', value: 'Formula 1' },
+  { label: '🎾 Tennis', value: 'Tennis' },
+  { label: '🏒 NHL', value: 'Hockey' },
+  { label: '🏅 Olympics', value: 'Olympics' },
+];
 
 function getPoints(secondsLeft) {
   return Math.max(10, Math.round((secondsLeft / TIMER_SECONDS) * 100));
@@ -19,8 +30,9 @@ function getCategoryEmoji(category) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState('home'); // home | quiz | result | leaderboard
+  const [screen, setScreen] = useState('home');
   const [playerName, setPlayerName] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [questions, setQuestions] = useState([]);
   const [current, setCurrent] = useState(0);
   const [score, setScore] = useState(0);
@@ -65,7 +77,10 @@ export default function App() {
       setLoading(false);
       return;
     }
-    const res = await fetch(`${API}/api/questions`);
+    const url = selectedCategory === 'All'
+      ? `${API}/api/questions`
+      : `${API}/api/questions?category=${encodeURIComponent(selectedCategory)}`;
+    const res = await fetch(url);
     const data = await res.json();
     setQuestions(data);
     setCurrent(0);
@@ -115,18 +130,32 @@ export default function App() {
   const timerPct = (timeLeft / TIMER_SECONDS) * 100;
   const timerColor = timeLeft > 10 ? '#22c55e' : timeLeft > 5 ? '#f59e0b' : '#ef4444';
 
-  // ── HOME ──────────────────────────────────────────────────────────────────
+  // HOME
   if (screen === 'home') return (
     <div style={styles.page}>
-      <div style={styles.card}>
+      <div style={{ ...styles.card, maxWidth: 560 }}>
         <div style={{ fontSize: 64, marginBottom: 8 }}>🏆</div>
         <h1 style={styles.title}>Sports Trivia</h1>
         <p style={styles.subtitle}>15 random questions · 20 seconds each · Score by speed!</p>
-        <div style={styles.categories}>
-          {['⚽ Football','🏀 Basketball','🎾 Tennis','🏎️ F1','🏅 Olympics','🏈 NFL','⛳ Golf','🥊 Boxing','🏃 Athletics','🏉 Rugby'].map(c => (
-            <span key={c} style={styles.badge}>{c}</span>
+
+        <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 10, alignSelf: 'flex-start' }}>Select a category:</p>
+        <div style={styles.catGrid}>
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.value}
+              style={{
+                ...styles.catBtn,
+                background: selectedCategory === cat.value ? '#2563eb' : '#1e293b',
+                border: selectedCategory === cat.value ? '2px solid #3b82f6' : '2px solid #334155',
+                color: selectedCategory === cat.value ? '#fff' : '#94a3b8',
+              }}
+              onClick={() => setSelectedCategory(cat.value)}
+            >
+              {cat.label}
+            </button>
           ))}
         </div>
+
         <input
           style={styles.input}
           placeholder="Enter your name..."
@@ -145,7 +174,7 @@ export default function App() {
     </div>
   );
 
-  // ── QUIZ ──────────────────────────────────────────────────────────────────
+  // QUIZ
   if (screen === 'quiz') {
     const q = questions[current];
     const options = ['A', 'B', 'C', 'D'];
@@ -154,7 +183,6 @@ export default function App() {
     return (
       <div style={styles.page}>
         <div style={{ ...styles.card, maxWidth: 640 }}>
-          {/* Header */}
           <div style={styles.quizHeader}>
             <span style={styles.qCounter}>Q {current + 1} / {questions.length}</span>
             <span style={styles.scorePill}>Score: {score}</span>
@@ -163,7 +191,6 @@ export default function App() {
             </span>
           </div>
 
-          {/* Timer bar */}
           <div style={styles.timerWrap}>
             <div style={{ ...styles.timerBar, width: `${timerPct}%`, background: timerColor }} />
           </div>
@@ -171,10 +198,8 @@ export default function App() {
             {timeLeft}s remaining {pointsEarned ? `· +${pointsEarned} pts!` : ''}
           </div>
 
-          {/* Question */}
           <p style={styles.question}>{q.question}</p>
 
-          {/* Options */}
           <div style={styles.optionsGrid}>
             {options.map((opt, i) => {
               let bg = '#1e293b';
@@ -205,7 +230,7 @@ export default function App() {
     );
   }
 
-  // ── RESULT ────────────────────────────────────────────────────────────────
+  // RESULT
   if (screen === 'result') {
     const max = questions.length * 100;
     const pct = Math.round((score / max) * 100);
@@ -226,7 +251,7 @@ export default function App() {
     );
   }
 
-  // ── LEADERBOARD ───────────────────────────────────────────────────────────
+  // LEADERBOARD
   if (screen === 'leaderboard') return (
     <div style={styles.page}>
       <div style={{ ...styles.card, maxWidth: 500 }}>
@@ -254,7 +279,8 @@ export default function App() {
 const styles = {
   page: {
     minHeight: '100vh', background: '#0f172a', display: 'flex',
-    alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: 'system-ui, sans-serif', color: '#f1f5f9',
+    alignItems: 'center', justifyContent: 'center', padding: 16,
+    fontFamily: 'system-ui, sans-serif', color: '#f1f5f9',
   },
   card: {
     background: '#1e293b', borderRadius: 20, padding: '40px 32px',
@@ -263,19 +289,29 @@ const styles = {
   },
   title: { fontSize: 28, fontWeight: 700, margin: '8px 0', color: '#f8fafc' },
   subtitle: { color: '#94a3b8', fontSize: 14, marginBottom: 20 },
-  categories: { display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 24 },
   badge: { background: '#334155', borderRadius: 99, padding: '4px 10px', fontSize: 12, color: '#cbd5e1' },
+  catGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: 8, width: '100%', marginBottom: 20,
+  },
+  catBtn: {
+    padding: '10px 6px', borderRadius: 10, fontSize: 12,
+    fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+  },
   input: {
     width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid #334155',
-    background: '#0f172a', color: '#f1f5f9', fontSize: 16, marginBottom: 12, boxSizing: 'border-box',
-    outline: 'none',
+    background: '#0f172a', color: '#f1f5f9', fontSize: 16, marginBottom: 12,
+    boxSizing: 'border-box', outline: 'none',
   },
   btn: {
     width: '100%', padding: '14px', borderRadius: 10, border: 'none',
     background: '#2563eb', color: '#fff', fontSize: 16, fontWeight: 600,
     cursor: 'pointer', transition: 'opacity 0.2s',
   },
-  quizHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 16, flexWrap: 'wrap', gap: 8 },
+  quizHeader: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    width: '100%', marginBottom: 16, flexWrap: 'wrap', gap: 8,
+  },
   qCounter: { background: '#334155', borderRadius: 99, padding: '4px 12px', fontSize: 13, fontWeight: 600 },
   scorePill: { background: '#1d4ed8', borderRadius: 99, padding: '4px 12px', fontSize: 13, fontWeight: 600, color: '#bfdbfe' },
   timerWrap: { width: '100%', height: 8, background: '#334155', borderRadius: 99, overflow: 'hidden', marginBottom: 6 },
@@ -289,6 +325,9 @@ const styles = {
   },
   optLabel: { background: '#334155', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: 13, flexShrink: 0 },
   scoreBig: { fontSize: 72, fontWeight: 800, color: '#facc15', lineHeight: 1 },
-  lbRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, marginBottom: 8, width: '100%', boxSizing: 'border-box' },
+  lbRow: {
+    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+    borderRadius: 10, marginBottom: 8, width: '100%', boxSizing: 'border-box',
+  },
   lbRank: { fontSize: 18, width: 32, textAlign: 'center' },
 };

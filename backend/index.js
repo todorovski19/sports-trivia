@@ -14,12 +14,21 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD || 'trivia_pass',
 });
 
-// Get 15 random questions
+// Get 15 random questions (optional category filter)
 app.get('/api/questions', async (req, res) => {
+  const { category } = req.query;
   try {
-    const result = await pool.query(
-      'SELECT id, question, option_a, option_b, option_c, option_d, category FROM questions ORDER BY RANDOM() LIMIT 15'
-    );
+    let result;
+    if (category && category !== 'All') {
+      result = await pool.query(
+        'SELECT id, question, option_a, option_b, option_c, option_d, category FROM questions WHERE category = $1 ORDER BY RANDOM() LIMIT 15',
+        [category]
+      );
+    } else {
+      result = await pool.query(
+        'SELECT id, question, option_a, option_b, option_c, option_d, category FROM questions ORDER BY RANDOM() LIMIT 15'
+      );
+    }
     res.json(result.rows);
   } catch (err) {
     console.error(err);
