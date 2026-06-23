@@ -74,6 +74,22 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
+// Check if player name already exists
+app.get('/api/check-name/:name', async (req, res) => {
+  const { name } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT COUNT(*) FROM leaderboard WHERE LOWER(player_name) = LOWER($1)',
+      [name]
+    );
+    const exists = parseInt(result.rows[0].count) > 0;
+    res.json({ exists });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to check name' });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

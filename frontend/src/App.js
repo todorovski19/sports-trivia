@@ -58,6 +58,13 @@ export default function App() {
   async function startGame() {
     if (!playerName.trim()) return;
     setLoading(true);
+    const checkRes = await fetch(`${API}/api/check-name/${encodeURIComponent(playerName.trim())}`);
+    const checkData = await checkRes.json();
+    if (checkData.exists) {
+      alert(`The name "${playerName}" is already taken! Please choose a different name.`);
+      setLoading(false);
+      return;
+    }
     const res = await fetch(`${API}/api/questions`);
     const data = await res.json();
     setQuestions(data);
